@@ -5,6 +5,18 @@ const LandingPage = () => {
   return (
     <div className="min-h-screen bg-white">
       <div className="max-w-5xl mx-auto px-8 py-24">
+        <div className="flex justify-start mb-12">
+          <Link
+            href="/"
+            className="btn-brutal btn-brutal-secondary px-6 py-3 text-base flex items-center gap-2"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 12H5"/>
+              <path d="m12 19-7-7 7-7"/>
+            </svg>
+            回到主页
+          </Link>
+        </div>
         <div className="text-center mb-24">
           <h1 className="text-7xl font-mono font-bold text-gray-900 mb-8 leading-tight tracking-tight">
             公众号订阅&AI检索
