@@ -1,0 +1,70 @@
+name: Deploy to Server
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'pnpm'
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v3
+        with:
+          version: 8
+
+      - name: Install dependencies
+        run: pnpm install
+
+      - name: Build server
+        run: pnpm build:server
+
+      - name: Build web
+        run: pnpm build:web
+
+      - name: Deploy to server
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+          SERVER_HOST: ${{ secrets.SERVER_HOST }}
+          SERVER_USER: ${{ secrets.SERVER_USER }}
+          SERVER_PATH: ${{ secrets.SERVER_PATH }}
+        run: |
+          if [ -n "$SSH_PRIVATE_KEY" ]; then
+            # 配置 SSH
+            mkdir -p ~/.ssh
+            echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
+            chmod 600 ~/.ssh/id_rsa
+            ssh-keyscan -H $SERVER_HOST >> ~/.ssh/known_hosts
+            
+            # 部署到服务器
+            echo "Deploying to server..."
+            
+            # 创建服务器目录结构
+            ssh $SERVER_USER@$SERVER_HOST "mkdir -p $SERVER_PATH/server $SERVER_PATH/web"
+            
+            # 部署服务器
+            rsync -avz --delete apps/server/dist/ $SERVER_USER@$SERVER_HOST:$SERVER_PATH/server/
+            rsync -avz --delete apps/server/package.json $SERVER_USER@$SERVER_HOST:$SERVER_PATH/server/
+            
+            # 部署前端
+            rsync -avz --delete apps/web/dist/ $SERVER_USER@$SERVER_HOST:$SERVER_PATH/web/
+            
+            # 安装依赖并重启服务
+            ssh $SERVER_USER@$SERVER_HOST "cd $SERVER_PATH/server && npm install && pm2 restart wewe-rss-server || pm2 start dist/main --name wewe-rss-server"
+            
+            echo "Deployment completed successfully!"
+          else
+            echo "No SSH private key provided. Skipping deployment."
+            echo "Please set SSH_PRIVATE_KEY, SERVER_HOST, SERVER_USER, and SERVER_PATH secrets in your GitHub repository."
+          fi
